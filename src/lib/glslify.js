@@ -1,5 +1,5 @@
-import * as path from 'path';
-import * as fsSync from 'fs';
+import * as path from "path";
+import * as fsSync from "fs";
 
 /**
  * @typedef {Object} GlslifyBaseOptions
@@ -17,8 +17,8 @@ export async function glslifyInit() {
   if (glslifyCompile) return;
   try {
     // @ts-ignore
-    const glslify = await import('glslify');
-    if (glslify && glslify.compile && typeof glslify.compile === 'function') {
+    const glslify = await import("glslify");
+    if (glslify && glslify.compile && typeof glslify.compile === "function") {
       glslifyCompile = glslify.compile;
     }
   } catch {
@@ -34,16 +34,27 @@ export async function glslifyInit() {
  * @param {(message: string) => never} failError
  * @param {(message: string) => void} [warnLog]
  */
-export async function glslifyProcessSource(id, source, options, failError, warnLog = console.error) {
+export async function glslifyProcessSource(
+  id,
+  source,
+  options,
+  failError,
+  warnLog = console.error
+) {
   if (!glslifyCompile) {
     failError(`glslify could not be found. Install it with npm i -D glslify`);
   }
 
   let basedir = path.dirname(id);
   if (!fsSync.existsSync(basedir)) {
-    warnLog(`Error resolving path: '${id}' : glslify may fail to find includes`);
+    warnLog(
+      `Error resolving path: '${id}' : glslify may fail to find includes`
+    );
     basedir = process.cwd();
   }
 
-  return glslifyCompile(source, /** @type {GlslifyOptions} */({basedir, ...options}));
+  return glslifyCompile(
+    source,
+    /** @type {GlslifyOptions} */ ({ basedir, ...options })
+  );
 }

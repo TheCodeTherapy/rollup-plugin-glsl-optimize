@@ -8,10 +8,7 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "checkJs": true,
-    "lib": ["ESNext"],
+    "lib": ["ESNext"]
   },
-  "exclude": [
-    "node_modules",
-    "**/node_modules/*",
-  ],
+  "exclude": ["node_modules", "**/node_modules/*"]
 }

@@ -1,13 +1,13 @@
-import {assert} from 'chai';
-import * as parse from '../../src/lib/parse.js';
+import { assert } from "chai";
+import * as parse from "../../src/lib/parse.js";
 
 const consoleOrig = global.console;
 let outBuf;
 function mockConsoleError() {
-  outBuf = '';
-  global.console = {...consoleOrig};
+  outBuf = "";
+  global.console = { ...consoleOrig };
   global.console.error = (...args) => {
-    outBuf += `${args.map(String).join(' ')}\n`;
+    outBuf += `${args.map(String).join(" ")}\n`;
   };
   global.console.warn = global.console.error;
 }
@@ -17,25 +17,21 @@ function unMockConsoleError() {
 }
 
 export function parserTests() {
-  describe('Parser', function() {
-    describe('#lexer()', function() {
-      const lexerTest = (input) => [...parse.test.lexer(input)].map(parse.test.printToken);
-      it('should lex empty input', function() {
+  describe("Parser", function () {
+    describe("#lexer()", function () {
+      const lexerTest = (input) =>
+        [...parse.test.lexer(input)].map(parse.test.printToken);
+      it("should lex empty input", function () {
         const input = ``;
-        const expected = [
-          `<EOF L1:0> v:'' t:''`,
-        ];
+        const expected = [`<EOF L1:0> v:'' t:''`];
         assert.deepStrictEqual(lexerTest(input), expected);
       });
-      it('should lex single char input', function() {
+      it("should lex single char input", function () {
         const input = `A`;
-        const expected = [
-          `<Line L1:1> v:'A' t:'A'`,
-          `<EOF L1:1> v:'' t:''`,
-        ];
+        const expected = [`<Line L1:1> v:'A' t:'A'`, `<EOF L1:1> v:'' t:''`];
         assert.deepStrictEqual(lexerTest(input), expected);
       });
-      it('should lex single newline input', function() {
+      it("should lex single newline input", function () {
         const input = `\n`;
         const expected = [
           `<EOL L1:1> v:'<EOL>' t:'<EOL>'`,
@@ -43,15 +39,12 @@ export function parserTests() {
         ];
         assert.deepStrictEqual(lexerTest(input), expected);
       });
-      it('should lex input without terminating newline', function() {
+      it("should lex input without terminating newline", function () {
         const input = `A`;
-        const expected = [
-          `<Line L1:1> v:'A' t:'A'`,
-          `<EOF L1:1> v:'' t:''`,
-        ];
+        const expected = [`<Line L1:1> v:'A' t:'A'`, `<EOF L1:1> v:'' t:''`];
         assert.deepStrictEqual(lexerTest(input), expected);
       });
-      it('should lex newlines correctly', function() {
+      it("should lex newlines correctly", function () {
         /* GLSL ES 300 spec:
           Lines are relevant for compiler diagnostic messages and the preprocessor.
           They are terminated by carriage-return or line-feed.
@@ -78,7 +71,7 @@ export function parserTests() {
         ];
         assert.deepStrictEqual(lexerTest(input), expected);
       });
-      it('should lex line continuations correctly', function() {
+      it("should lex line continuations correctly", function () {
         /* GLSL ES 300 spec:
           Lines separated by the line-continuation character preceding a new line are concatenated together before
           either comment processing or preprocessing.  This means that no white space is substituted for the
@@ -93,13 +86,8 @@ export function parserTests() {
         ];
         assert.deepStrictEqual(lexerTest(input), expected);
       });
-      it('should lex comments correctly', function() {
-        const input = `/*A*/\n` +
-                      `X\n` +
-                      `//B\n` +
-                      `Y\n` +
-                      `/*C//D*/\n` +
-                      `Z`;
+      it("should lex comments correctly", function () {
+        const input = `/*A*/\n` + `X\n` + `//B\n` + `Y\n` + `/*C//D*/\n` + `Z`;
         const expected = [
           `<Comment L1:1> v:'A' t:'/*A*/'`,
           `<EOL L1:6> v:'<EOL>' t:'<EOL>'`,
@@ -116,10 +104,8 @@ export function parserTests() {
         ];
         assert.deepStrictEqual(lexerTest(input), expected);
       });
-      it('should lex multi-line comments correctly', function() {
-        const input = `/*A\n` +
-                      `B\tC*/\n` +
-                      `X\n`;
+      it("should lex multi-line comments correctly", function () {
+        const input = `/*A\n` + `B\tC*/\n` + `X\n`;
         const expected = [
           `<Comment L1:1> v:'A<EOL>B<TAB>C' t:'/*A<EOL>B<TAB>C*/'`,
           `<EOL L2:6> v:'<EOL>' t:'<EOL>'`,
@@ -129,10 +115,8 @@ export function parserTests() {
         ];
         assert.deepStrictEqual(lexerTest(input), expected);
       });
-      it('should lex non-tokens correctly', function() {
-        const input = `/A\n` +
-                      `\\B\tC*/\n` +
-                      `//X\n`;
+      it("should lex non-tokens correctly", function () {
+        const input = `/A\n` + `\\B\tC*/\n` + `//X\n`;
         const expected = [
           `<Line L1:1> v:'/A' t:'/A'`,
           `<EOL L1:3> v:'<EOL>' t:'<EOL>'`,
@@ -145,24 +129,24 @@ export function parserTests() {
         assert.deepStrictEqual(lexerTest(input), expected);
       });
     });
-    describe('#simpleParse()', function() {
-      const parserTest = (input) => [...parse.simpleParse(input)].map(parse.test.printToken);
-      const parserDirectTest = (input) => [...parse.test.parser(input)].map(parse.test.printToken);
-      it('should parse empty input', function() {
+    describe("#simpleParse()", function () {
+      const parserTest = (input) =>
+        [...parse.simpleParse(input)].map(parse.test.printToken);
+      const parserDirectTest = (input) =>
+        [...parse.test.parser(input)].map(parse.test.printToken);
+      it("should parse empty input", function () {
         const input = ``;
-        const expected = [
-          `<EOF L1:0> v:'' t:''`,
-        ];
+        const expected = [`<EOF L1:0> v:'' t:''`];
         assert.deepStrictEqual(parserTest(input), expected);
       });
-      it('should pass-through existing tokens', function() {
-        const input = [{type: 8, text: '', col: 1, line: 1, value: '', test: 'test'}];
-        const expected = [
-          `<Directive L1:1> v:'' t:'' | test : 'test'`,
+      it("should pass-through existing tokens", function () {
+        const input = [
+          { type: 8, text: "", col: 1, line: 1, value: "", test: "test" },
         ];
+        const expected = [`<Directive L1:1> v:'' t:'' | test : 'test'`];
         assert.deepStrictEqual(parserDirectTest(input), expected);
       });
-      it('should parse inline comments as a single space', function() {
+      it("should parse inline comments as a single space", function () {
         /* GLSL ES 300 spec:
          * All comments are replaced with a single space
          */
@@ -173,7 +157,7 @@ export function parserTests() {
         ];
         assert.deepStrictEqual(parserTest(input), expected);
       });
-      it('should yield top level comments', function() {
+      it("should yield top level comments", function () {
         const input = `#pragma test\n/* A B \n C */\ntest`;
         const expected = [
           `<Directive L1:1> v:'#pragma test' t:'#pragma test'`,
@@ -185,7 +169,7 @@ export function parserTests() {
         ];
         assert.deepStrictEqual(parserTest(input), expected);
       });
-      it('should parse directives', function() {
+      it("should parse directives", function () {
         const input = `#version test\n#line test\n#extension test : require\n`;
         const expected = [
           `<Version L1:1> v:'#version test' t:'#version test' | Version : 'test'`,
@@ -199,13 +183,16 @@ export function parserTests() {
         ];
         assert.deepStrictEqual(parserTest(input), expected);
       });
-      it('should warn about invalid extension directives', function() {
+      it("should warn about invalid extension directives", function () {
         mockConsoleError();
-        parserTest('#extension test');
-        assert.include(unMockConsoleError(), 'Warning: #extension directive: parse error');
+        parserTest("#extension test");
+        assert.include(
+          unMockConsoleError(),
+          "Warning: #extension directive: parse error"
+        );
 
         mockConsoleError();
-        parserTest('#extension test : potato');
+        parserTest("#extension test : potato");
         assert.include(unMockConsoleError(), `unknown behavior 'potato'`);
       });
     });

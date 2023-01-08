@@ -1,2 +1,2 @@
-import frag from './glslifyshaders/noise.frag';
+import frag from "./glslifyshaders/noise.frag";
 console.log(frag);

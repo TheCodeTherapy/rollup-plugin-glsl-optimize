@@ -1,12 +1,23 @@
-import {EOL} from 'os';
-import * as path from 'path';
-import * as fsSync from 'fs';
-import {insertExtensionPreamble, fixupDirectives, insertPreamble} from './preamble.js';
-import {argQuote, configureTools, getCachePath, launchTool, printToolDiagnostic, waitForToolBuffered} from './tools.js';
-import {checkMakeFolder, rmDir} from './download.js';
-import {compressShader} from './minify.js';
-import * as crypto from 'crypto';
-import MagicString from 'magic-string';
+import { EOL } from "os";
+import * as path from "path";
+import * as fsSync from "fs";
+import {
+  insertExtensionPreamble,
+  fixupDirectives,
+  insertPreamble,
+} from "./preamble.js";
+import {
+  argQuote,
+  configureTools,
+  getCachePath,
+  launchTool,
+  printToolDiagnostic,
+  waitForToolBuffered,
+} from "./tools.js";
+import { checkMakeFolder, rmDir } from "./download.js";
+import { compressShader } from "./minify.js";
+import * as crypto from "crypto";
+import MagicString from "magic-string";
 
 /**
  * @typedef {'vert'|'tesc'|'tese'|'geom'|'frag'|'comp'} GLSLStageName
@@ -47,7 +58,10 @@ import MagicString from 'magic-string';
  * @param {string[]} params
  */
 async function glslRunTool(kind, title, name, workingDir, input, params) {
-  const result = await waitForToolBuffered(launchTool(kind, workingDir, params), input);
+  const result = await waitForToolBuffered(
+    launchTool(kind, workingDir, params),
+    input
+  );
   if (result.error) {
     printToolDiagnostic(result.outLines);
     printToolDiagnostic(result.errLines);
@@ -55,7 +69,7 @@ async function glslRunTool(kind, title, name, workingDir, input, params) {
     console.error(errMsg);
     throw new Error(errMsg);
   }
-  return result.outLines ? result.outLines.join(EOL) : '';
+  return result.outLines ? result.outLines.join(EOL) : "";
 }
 
 /**
@@ -67,15 +81,30 @@ async function glslRunTool(kind, title, name, workingDir, input, params) {
  * @param {string[]} params
  * @param {string[]} extraParams
  */
-async function glslRunValidator(name, workingDir, stageName, input, params, extraParams) {
-  return glslRunTool('Validator', 'Khronos glslangValidator', name, workingDir, input, [
-    '--stdin',
-    '-C', // cascading errors (don't stop after first)
-    '-t', // Multithreaded
-    '-S', stageName, // Shader type
-    ...params,
-    ...extraParams,
-  ]);
+async function glslRunValidator(
+  name,
+  workingDir,
+  stageName,
+  input,
+  params,
+  extraParams
+) {
+  return glslRunTool(
+    "Validator",
+    "Khronos glslangValidator",
+    name,
+    workingDir,
+    input,
+    [
+      "--stdin",
+      "-C", // cascading errors (don't stop after first)
+      "-t", // Multithreaded
+      "-S",
+      stageName, // Shader type
+      ...params,
+      ...extraParams,
+    ]
+  );
 }
 
 /**
@@ -89,17 +118,33 @@ async function glslRunValidator(name, workingDir, stageName, input, params, extr
  * @param {string[]} params
  * @param {string[]} extraParams
  */
-async function glslRunOptimizer(name, workingDir, inputFile, outputFile, input,
-    preserveUnusedBindings = true, params, extraParams) {
-  return glslRunTool('Optimizer', 'Khronos spirv-opt', name, workingDir, input, [
-    '-O', // optimize for performance
-    '--target-env=opengl4.0', // One of opengl4.0|opengl4.1|opengl4.2|opengl4.3|opengl4.5
-    ...(preserveUnusedBindings ? ['--preserve-bindings'] : []),
-    ...params,
-    ...extraParams,
-    ...argQuote(inputFile),
-    '-o', ...argQuote(outputFile),
-  ]);
+async function glslRunOptimizer(
+  name,
+  workingDir,
+  inputFile,
+  outputFile,
+  input,
+  preserveUnusedBindings = true,
+  params,
+  extraParams
+) {
+  return glslRunTool(
+    "Optimizer",
+    "Khronos spirv-opt",
+    name,
+    workingDir,
+    input,
+    [
+      "-O", // optimize for performance
+      "--target-env=opengl4.0", // One of opengl4.0|opengl4.1|opengl4.2|opengl4.3|opengl4.5
+      ...(preserveUnusedBindings ? ["--preserve-bindings"] : []),
+      ...params,
+      ...extraParams,
+      ...argQuote(inputFile),
+      "-o",
+      ...argQuote(outputFile),
+    ]
+  );
 }
 
 /**
@@ -113,11 +158,21 @@ async function glslRunOptimizer(name, workingDir, inputFile, outputFile, input,
  * @param {string[]} params
  * @param {string[]} extraParams
  */
-async function glslRunCross(name, workingDir, stageName, inputFile, input, emitLineInfo, params, extraParams) {
-  return glslRunTool('Cross', 'Khronos spirv-cross', name, workingDir, input, [
+async function glslRunCross(
+  name,
+  workingDir,
+  stageName,
+  inputFile,
+  input,
+  emitLineInfo,
+  params,
+  extraParams
+) {
+  return glslRunTool("Cross", "Khronos spirv-cross", name, workingDir, input, [
     ...argQuote(inputFile),
-    ...(emitLineInfo ? ['--emit-line-directives'] : []),
-    `--stage`, stageName,
+    ...(emitLineInfo ? ["--emit-line-directives"] : []),
+    `--stage`,
+    stageName,
     ...params,
     ...extraParams,
   ]);
@@ -129,10 +184,14 @@ async function glslRunCross(name, workingDir, stageName, inputFile, input, emitL
  * @return {string}
  */
 function getBuildDir(id) {
-  const sanitizeID = path.basename(id).replace(/([^a-z0-9]+)/gi, '-').toLowerCase();
-  const uniqID = ((Date.now()>>>0) + crypto.randomBytes(4).readUInt32LE())>>>0; // +ve 4 byte unique ID
-  const uniqIDHex = uniqID.toString(16).padStart(8, '0'); // 8 char random hex
-  return path.join(getCachePath(), 'glslBuild', `${sanitizeID}-${uniqIDHex}`);
+  const sanitizeID = path
+    .basename(id)
+    .replace(/([^a-z0-9]+)/gi, "-")
+    .toLowerCase();
+  const uniqID =
+    ((Date.now() >>> 0) + crypto.randomBytes(4).readUInt32LE()) >>> 0; // +ve 4 byte unique ID
+  const uniqIDHex = uniqID.toString(16).padStart(8, "0"); // 8 char random hex
+  return path.join(getCachePath(), "glslBuild", `${sanitizeID}-${uniqIDHex}`);
 }
 
 /**
@@ -144,8 +203,13 @@ function getBuildDir(id) {
  * @param {(message: string) => void} [warnLog]
  * @return {Promise<import('rollup').SourceDescription>}
  */
-export async function glslProcessSource(id, source, stageName, glslOptions = {}, warnLog = console.error) {
-
+export async function glslProcessSource(
+  id,
+  source,
+  stageName,
+  glslOptions = {},
+  warnLog = console.error
+) {
   /** @type {GLSLToolOptions} */
   const options = {
     sourceMap: true,
@@ -163,7 +227,10 @@ export async function glslProcessSource(id, source, stageName, glslOptions = {},
     ...glslOptions,
   };
 
-  configureTools({}, options.optimize ? ['Validator', 'Optimizer', 'Cross'] : ['Validator']);
+  configureTools(
+    {},
+    options.optimize ? ["Validator", "Optimizer", "Cross"] : ["Validator"]
+  );
 
   let tempBuildDir;
   if (options.optimize) {
@@ -180,7 +247,9 @@ export async function glslProcessSource(id, source, stageName, glslOptions = {},
   let outputFile = targetID;
 
   if (!fsSync.existsSync(targetDir)) {
-    warnLog(`Error resolving path: '${id}' : Khronos glslangValidator may fail to find includes`);
+    warnLog(
+      `Error resolving path: '${id}' : Khronos glslangValidator may fail to find includes`
+    );
     targetDir = process.cwd();
     targetID = id;
     outputFile = `temp`;
@@ -195,12 +264,15 @@ export async function glslProcessSource(id, source, stageName, glslOptions = {},
     optimizedFileAbs = path.join(tempBuildDir, `${outputFile}-opt.spv`);
     versionReplacer = (version) => {
       // Try and parse the #version directive if present
-      const versionParts = version && version.match(/^\s*(\d+)(?:\s+(es))?\s*$/i);
+      const versionParts =
+        version && version.match(/^\s*(\d+)(?:\s+(es))?\s*$/i);
       if (versionParts && versionParts.length === 3) {
         targetGlslVersion = +versionParts[1];
       }
       if (targetGlslVersion < 300) {
-        throw new Error(`Only GLSL ES shaders version 300 (WebGL2) or higher can be optimized`);
+        throw new Error(
+          `Only GLSL ES shaders version 300 (WebGL2) or higher can be optimized`
+        );
       }
       // SPIR-V compilation requires >= 310 es
       // and we run the optimizer under OpenGL 4.0 (GLSL 400) semantics
@@ -208,7 +280,12 @@ export async function glslProcessSource(id, source, stageName, glslOptions = {},
       return `${Math.max(targetGlslVersion, 310)} es`;
     };
   }
-  const {code, didInsertion} = insertExtensionPreamble(source, targetID, versionReplacer, options.preamble);
+  const { code, didInsertion } = insertExtensionPreamble(
+    source,
+    targetID,
+    versionReplacer,
+    options.preamble
+  );
 
   // if (options.optimizeBuild) {
   //   console.log(`Target GLSL version: ${targetGlslVersion}`);
@@ -222,73 +299,117 @@ export async function glslProcessSource(id, source, stageName, glslOptions = {},
   let processedGLSL;
 
   if (options.optimize) {
-    await glslRunValidator('Build spirv', targetDir, stageName,
-        code, [
-          '-G', // opengl
-          '-g', // debug info (required for cross --emit-line-directives)
-          '--auto-map-locations', // avoid "SPIR-V requires location for user input/output"
-          '--auto-map-bindings',
-          // '-Od', // disable optimizations (in validator)
-          // '--no-storage-format',
-          '-o', ...argQuote(outputFileAbs),
-          // '-H', // Human-readable spirv
-        ], extraValidatorParams);
+    await glslRunValidator(
+      "Build spirv",
+      targetDir,
+      stageName,
+      code,
+      [
+        "-G", // opengl
+        "-g", // debug info (required for cross --emit-line-directives)
+        "--auto-map-locations", // avoid "SPIR-V requires location for user input/output"
+        "--auto-map-bindings",
+        // '-Od', // disable optimizations (in validator)
+        // '--no-storage-format',
+        "-o",
+        ...argQuote(outputFileAbs),
+        // '-H', // Human-readable spirv
+      ],
+      extraValidatorParams
+    );
 
     if (!fsSync.existsSync(outputFileAbs)) {
       throw new Error(`Build spirv failed: no output file`);
     }
     if (!options.optimizerDebugSkipOptimizer) {
-      await glslRunOptimizer('Optimize spirv', targetDir,
-          outputFileAbs, optimizedFileAbs, undefined, options.optimizerPreserveUnusedBindings, [
-            // '--print-all', // Print spirv for debugging
-          ], options.extraOptimizerParams);
+      await glslRunOptimizer(
+        "Optimize spirv",
+        targetDir,
+        outputFileAbs,
+        optimizedFileAbs,
+        undefined,
+        options.optimizerPreserveUnusedBindings,
+        [
+          // '--print-all', // Print spirv for debugging
+        ],
+        options.extraOptimizerParams
+      );
       if (!fsSync.existsSync(optimizedFileAbs)) {
-        throw new Error(`Optimize spirv failed: no output file (${optimizedFileAbs})`);
+        throw new Error(
+          `Optimize spirv failed: no output file (${optimizedFileAbs})`
+        );
       }
     }
 
-    processedGLSL = await glslRunCross('Build spirv to GLSL', targetDir, stageName,
-      options.optimizerDebugSkipOptimizer ? outputFileAbs : optimizedFileAbs, undefined, options.emitLineDirectives, [
-        '--es', // WebGL is always ES
-        '--version', `${targetGlslVersion}`,
+    processedGLSL = await glslRunCross(
+      "Build spirv to GLSL",
+      targetDir,
+      stageName,
+      options.optimizerDebugSkipOptimizer ? outputFileAbs : optimizedFileAbs,
+      undefined,
+      options.emitLineDirectives,
+      [
+        "--es", // WebGL is always ES
+        "--version",
+        `${targetGlslVersion}`,
         // '--disable-storage-image-qualifier-deduction',
         // '--glsl-es-default-float-precision highp',
         // '--glsl-es-default-int-precision highp',
-      ], options.extraCrossParams);
+      ],
+      options.extraCrossParams
+    );
 
     // Cleanup:
     rmDir(tempBuildDir);
-
-
-
   } else {
-    processedGLSL = await glslRunValidator('Preprocessing', targetDir, stageName, code, [
-      '-E', // print pre-processed GLSL
-    ], extraValidatorParams);
-    await glslRunValidator('Validation', targetDir, stageName,
-        processedGLSL, [], extraValidatorParams);
+    processedGLSL = await glslRunValidator(
+      "Preprocessing",
+      targetDir,
+      stageName,
+      code,
+      [
+        "-E", // print pre-processed GLSL
+      ],
+      extraValidatorParams
+    );
+    await glslRunValidator(
+      "Validation",
+      targetDir,
+      stageName,
+      processedGLSL,
+      [],
+      extraValidatorParams
+    );
   }
 
-  processedGLSL = fixupDirectives(processedGLSL,
-      options.emitLineDirectives && !options.suppressLineExtensionDirective,
-      didInsertion && (!options.optimize || options.emitLineDirectives),
-      options.optimize, !options.emitLineDirectives, undefined);
+  processedGLSL = fixupDirectives(
+    processedGLSL,
+    options.emitLineDirectives && !options.suppressLineExtensionDirective,
+    didInsertion && (!options.optimize || options.emitLineDirectives),
+    options.optimize,
+    !options.emitLineDirectives,
+    undefined
+  );
 
-
-  const outputCode = options.compress ? compressShader(processedGLSL) : processedGLSL;
+  const outputCode = options.compress
+    ? compressShader(processedGLSL)
+    : processedGLSL;
 
   /** @type {import('rollup').LoadResult} */
   const result = {
     code: outputCode,
-    map: {mappings: ''},
+    map: { mappings: "" },
   };
 
   if (options.sourceMap) {
-    const sourceMapSource = insertPreamble(processedGLSL,
-        '/*\n' +
-        `* Preprocessed${options.optimize?' + Optimized':''} from '${targetID}'\n` +
-        (options.compress ? '* [Embedded string is compressed]\n':'') +
-        '*/',
+    const sourceMapSource = insertPreamble(
+      processedGLSL,
+      "/*\n" +
+        `* Preprocessed${
+          options.optimize ? " + Optimized" : ""
+        } from '${targetID}'\n` +
+        (options.compress ? "* [Embedded string is compressed]\n" : "") +
+        "*/"
     ).code;
     const magicString = new MagicString(sourceMapSource);
     result.map = magicString.generateMap({
@@ -299,5 +420,4 @@ export async function glslProcessSource(id, source, stageName, glslOptions = {},
   }
 
   return result;
-
 }

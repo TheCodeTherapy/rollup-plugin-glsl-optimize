@@ -1,2 +1,2 @@
-import frag from './shaders/stageless.glsl';
+import frag from "./shaders/stageless.glsl";
 console.log(frag);

@@ -12,13 +12,29 @@ export function* simpleParse(input) {
  * @return {TokenID}
  * @param {Number} n
  */
-const _T = (n) => /** @type {TokenID} */(n);
+const _T = (n) => /** @type {TokenID} */ (n);
 /** @internal */
-export const TOK = Object.freeze({EOL: _T(1), EOF: _T(2), Line: _T(3), Comment: _T(4),
-  Version: _T(5), Extension: _T(6), LineNo: _T(7), Directive: _T(8)});
+export const TOK = Object.freeze({
+  EOL: _T(1),
+  EOF: _T(2),
+  Line: _T(3),
+  Comment: _T(4),
+  Version: _T(5),
+  Extension: _T(6),
+  LineNo: _T(7),
+  Directive: _T(8),
+});
 /** @internal */
-export const TOKENNAMES = Object.freeze({1: 'EOL', 2: 'EOF', 3: 'Line', 4: 'Comment',
-  5: 'Version', 6: 'Extension', 7: 'LineNo', 8: 'Directive'});
+export const TOKENNAMES = Object.freeze({
+  1: "EOL",
+  2: "EOF",
+  3: "Line",
+  4: "Comment",
+  5: "Version",
+  6: "Extension",
+  7: "LineNo",
+  8: "Directive",
+});
 
 /**
  * @typedef {Object} LexerToken
@@ -36,8 +52,11 @@ export const TOKENNAMES = Object.freeze({1: 'EOL', 2: 'EOF', 3: 'Line', 4: 'Comm
  */
 function* lexer(input) {
   let skipOne = false;
-  let line = 1, col = 0;
-  let afterLineContinuation = false, inCommentSingleLine = false, inCommentMultiLine = false;
+  let line = 1,
+    col = 0;
+  let afterLineContinuation = false,
+    inCommentSingleLine = false,
+    inCommentMultiLine = false;
   /** @type {LexerToken} */
   let curToken = undefined;
   /** @type {string} */
@@ -50,7 +69,7 @@ function* lexer(input) {
   };
   /** @param {TokenID} type */
   const setToken = (type) => {
-    curToken = {type, col, line, value: '', text: ''};
+    curToken = { type, col, line, value: "", text: "" };
   };
   const emitToken = function* () {
     if (curToken.type === TOK.Line) {
@@ -78,13 +97,14 @@ function* lexer(input) {
       afterLineContinuation = false;
     } else if (inCommentMultiLine) {
       appendToken();
-      curToken.value += '\n';
+      curToken.value += "\n";
     } else {
       yield* emitTokenIf();
       inCommentSingleLine = false;
-      yield {type: TOK.EOL, text: curText, col, line, value: '\n'};
+      yield { type: TOK.EOL, text: curText, col, line, value: "\n" };
     }
-    line++; col = 0;
+    line++;
+    col = 0;
   };
 
   if (input.length > 0) {
@@ -103,9 +123,10 @@ function* lexer(input) {
       /** Current char */
       curText = cur;
       switch (cur) {
-        case '\\':
+        case "\\":
           switch (next) {
-            case '\r': case '\n':
+            case "\r":
+            case "\n":
               setTokenIf(TOK.Line);
               appendToken();
               afterLineContinuation = true;
@@ -115,15 +136,17 @@ function* lexer(input) {
               appendTokenValue();
           }
           break;
-        case '\r':
-          if (next === '\n') {
-            curText += next; skipOne = true;
+        case "\r":
+          if (next === "\n") {
+            curText += next;
+            skipOne = true;
           }
           yield* handleEOL();
           break;
-        case '\n':
-          if (next === '\r') {
-            curText += next; skipOne = true;
+        case "\n":
+          if (next === "\r") {
+            curText += next;
+            skipOne = true;
           }
           yield* handleEOL();
           break;
@@ -131,8 +154,9 @@ function* lexer(input) {
           if (inCommentSingleLine) {
             appendTokenValue();
           } else if (inCommentMultiLine) {
-            if (cur === '*' && next === '/') {
-              curText += next; skipOne = true;
+            if (cur === "*" && next === "/") {
+              curText += next;
+              skipOne = true;
               appendToken();
               yield* emitToken();
               inCommentMultiLine = false;
@@ -141,17 +165,19 @@ function* lexer(input) {
             }
           } else {
             switch (cur) {
-              case '/':
+              case "/":
                 switch (next) {
-                  case '/':
-                    curText += next; skipOne = true;
+                  case "/":
+                    curText += next;
+                    skipOne = true;
                     yield* emitTokenIf();
                     setToken(TOK.Comment);
                     appendToken();
                     inCommentSingleLine = true;
                     break;
-                  case '*':
-                    curText += next; skipOne = true;
+                  case "*":
+                    curText += next;
+                    skipOne = true;
                     yield* emitTokenIf();
                     setToken(TOK.Comment);
                     appendToken();
@@ -167,12 +193,11 @@ function* lexer(input) {
                 appendTokenValue();
             }
           }
-
       } // End main switch
     } // End for
     yield* emitTokenIf();
   } // End if input
-  yield {type: TOK.EOF, text: '', col, line, value: ''};
+  yield { type: TOK.EOF, text: "", col, line, value: "" };
 }
 
 /**
@@ -190,7 +215,6 @@ function* lexer(input) {
  * @return {Generator<ParserToken>}
  */
 function* parser(input) {
-
   /* Coalesce comment tokens, since we could have
   #directive <COMMENT> value1 value2  */
 
@@ -208,15 +232,22 @@ function* parser(input) {
           yield token;
         }
         break;
-      case TOK.EOL: case TOK.EOF:
+      case TOK.EOL:
+      case TOK.EOF:
         if (LineTokens.length > 0) {
           /** @type {ParserToken} */
-          const combinedToken = {...LineTokens[0], type: TOK.Line,
+          const combinedToken = {
+            ...LineTokens[0],
+            type: TOK.Line,
             // Comments are treated syntactically as a single space:
-            value: LineTokens.map((token) => token.type === TOK.Comment ? ' ' : token.value).join(''),
-            text: LineTokens.map((token) => token.text).join(''),
+            value: LineTokens.map((token) =>
+              token.type === TOK.Comment ? " " : token.value
+            ).join(""),
+            text: LineTokens.map((token) => token.text).join(""),
           };
-          const matchPreprocessor = /^[ \t]*#[ \t]*([^ \t].*)?$/u.exec(combinedToken.value);
+          const matchPreprocessor = /^[ \t]*#[ \t]*([^ \t].*)?$/u.exec(
+            combinedToken.value
+          );
           if (matchPreprocessor && matchPreprocessor.length === 2) {
             // Preprocessor directive
             const directiveLine = matchPreprocessor[1];
@@ -226,30 +257,40 @@ function* parser(input) {
                 let [directive, ...body] = directiveParts;
                 body = body.filter(Boolean); // Filter whitespace
                 switch (directive.toLowerCase()) {
-                  case 'version':
+                  case "version":
                     combinedToken.type = TOK.Version;
-                    combinedToken.Version = body.join(' ');
+                    combinedToken.Version = body.join(" ");
                     break;
-                  case 'line':
+                  case "line":
                     combinedToken.type = TOK.LineNo;
                     break;
-                  case 'extension': {
-                    combinedToken.type = TOK.Extension;
-                    if (body.length === 3 && body[1] === ':') {
-                      combinedToken.ExtensionName = body[0];
-                      const extensionBehavior = body[2].toLowerCase();
-                      switch (extensionBehavior) {
-                        case 'require': case 'enable': case 'warn': case 'disable':
-                          combinedToken.ExtensionBehavior = extensionBehavior;
-                          break;
-                        default:
-                          combinedToken.ExtensionBehavior = body[2];
-                          warnParse(`#extension directive: unknown behavior '${body[2]}'`, combinedToken);
+                  case "extension":
+                    {
+                      combinedToken.type = TOK.Extension;
+                      if (body.length === 3 && body[1] === ":") {
+                        combinedToken.ExtensionName = body[0];
+                        const extensionBehavior = body[2].toLowerCase();
+                        switch (extensionBehavior) {
+                          case "require":
+                          case "enable":
+                          case "warn":
+                          case "disable":
+                            combinedToken.ExtensionBehavior = extensionBehavior;
+                            break;
+                          default:
+                            combinedToken.ExtensionBehavior = body[2];
+                            warnParse(
+                              `#extension directive: unknown behavior '${body[2]}'`,
+                              combinedToken
+                            );
+                        }
+                      } else {
+                        warnParse(
+                          "#extension directive: parse error",
+                          combinedToken
+                        );
                       }
-                    } else {
-                      warnParse('#extension directive: parse error', combinedToken);
                     }
-                  }
                     break;
                   default:
                     combinedToken.type = TOK.Directive;
@@ -269,28 +310,29 @@ function* parser(input) {
   }
 }
 
-const warnParse = (message, token) => console.error(`Warning: ${formatParseError(message, token)}`);
+const warnParse = (message, token) =>
+  console.error(`Warning: ${formatParseError(message, token)}`);
 
 /**
  * @internal
  * @param {string} message
  * @param {LexerToken} token
  */
-export const formatParseError = (message, token) => `${message}\nLine ${
-  token.line} col ${token.col}:\n${formatLine(token.text)}`;
+export const formatParseError = (message, token) =>
+  `${message}\nLine ${token.line} col ${token.col}:\n${formatLine(token.text)}`;
 
 const formatLine = (line) => {
-  let lineF = '';
+  let lineF = "";
   for (let i = 0; i < line.length; i++) {
     switch (line[i]) {
-      case '\r':
-        lineF += '<CR>';
+      case "\r":
+        lineF += "<CR>";
         break;
-      case '\n':
-        lineF += '<EOL>';
+      case "\n":
+        lineF += "<EOL>";
         break;
-      case '\t':
-        lineF += '<TAB>';
+      case "\t":
+        lineF += "<TAB>";
         break;
       default:
         lineF += line[i];
@@ -299,17 +341,20 @@ const formatLine = (line) => {
   return lineF;
 };
 
-
 /**
  * @return {string}
  * @param {ParserToken} t
  */
 const printToken = (t) => {
-  const {type, line, col, value, text, ...rest} = t;
+  const { type, line, col, value, text, ...rest } = t;
   const restKV = Object.entries(rest);
-  return `<${TOKENNAMES[type]} L${line}:${col}> v:'${
-    formatLine(value)}' t:'${formatLine(text)}'${
-      restKV.length ? ` | ${restKV.map(([k, v]) => `${k} : '${v}'`).join(' | ')}`: ''}`;
+  return `<${TOKENNAMES[type]} L${line}:${col}> v:'${formatLine(
+    value
+  )}' t:'${formatLine(text)}'${
+    restKV.length
+      ? ` | ${restKV.map(([k, v]) => `${k} : '${v}'`).join(" | ")}`
+      : ""
+  }`;
 };
 
 export const test = {

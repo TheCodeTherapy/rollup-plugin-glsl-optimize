@@ -1,2 +1,2 @@
-import frag from './glslifyshaders/test.frag';
+import frag from "./glslifyshaders/test.frag";
 console.log(frag);

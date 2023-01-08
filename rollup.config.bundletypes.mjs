@@ -1,17 +1,17 @@
-import internalDel from 'del';
-import del from 'rollup-plugin-delete';
-import dts from 'rollup-plugin-dts';
-import * as fsSync from 'fs';
+import internalDel from "del";
+import del from "rollup-plugin-delete";
+import dts from "rollup-plugin-dts";
+import * as fsSync from "fs";
 
-const IN_DIR = 'typings-autogen';
-const OUTPUT_FILE = 'dist/index.d.ts';
+const IN_DIR = "typings-autogen";
+const OUTPUT_FILE = "dist/index.d.ts";
 
 let earlyDelDone = false;
 // Runs sequentially before buildStart hooks:
 function earlyDel(targets = [], deleteOptions = {}) {
   return {
-    name: 'earlydel',
-    options: function(options) {
+    name: "earlydel",
+    options: function (options) {
       if (!earlyDelDone) {
         earlyDelDone = true;
         const paths = internalDel.sync(targets, deleteOptions);
@@ -30,26 +30,28 @@ function earlyDel(targets = [], deleteOptions = {}) {
 }
 
 function appendDts(filePath) {
-  const fileContent = fsSync.readFileSync(filePath, {encoding: 'utf8'});
+  const fileContent = fsSync.readFileSync(filePath, { encoding: "utf8" });
   return {
-    name: 'append-dts',
+    name: "append-dts",
     renderChunk(code) {
       return `${code}\n${fileContent}`;
     },
   };
 }
 
-export default [{
-  input: `${IN_DIR}/src/index.d.ts`,
-  output: {
-    file: OUTPUT_FILE,
-    format: 'es',
+export default [
+  {
+    input: `${IN_DIR}/src/index.d.ts`,
+    output: {
+      file: OUTPUT_FILE,
+      format: "es",
+    },
+    plugins: [
+      earlyDel([OUTPUT_FILE]),
+      dts({ compilerOptions: {} }),
+      // appendDts('src/resources.d.ts'),
+      del({ hook: "buildEnd", targets: [IN_DIR] }),
+    ],
+    external: ["child_process"],
   },
-  plugins: [
-    earlyDel([OUTPUT_FILE]),
-    dts({compilerOptions: {}}),
-    // appendDts('src/resources.d.ts'),
-    del({hook: 'buildEnd', targets: [IN_DIR]}),
-  ],
-  external: ['child_process'],
-}];
+];

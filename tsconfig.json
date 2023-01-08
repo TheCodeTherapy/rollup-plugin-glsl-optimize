@@ -14,10 +14,7 @@
     "allowJs": true,
     "declaration": true,
     "emitDeclarationOnly": true,
-    "stripInternal": true,
+    "stripInternal": true
   },
-  "exclude": [
-    "node_modules",
-    "**/node_modules/*",
-  ],
+  "exclude": ["node_modules", "**/node_modules/*"]
 }
