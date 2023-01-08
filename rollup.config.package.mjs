@@ -1,4 +1,4 @@
-import internalDel from "del";
+import { deleteSync } from "del";
 import commonjs from "@rollup/plugin-commonjs";
 import resolve from "@rollup/plugin-node-resolve";
 import cleanup from "rollup-plugin-cleanup";
@@ -11,7 +11,7 @@ function earlyDel(targets = [], deleteOptions = {}) {
     options: function (options) {
       if (!earlyDelDone) {
         earlyDelDone = true;
-        const paths = internalDel.sync(targets, deleteOptions);
+        const paths = deleteSync(targets, deleteOptions);
         if (deleteOptions.verbose) {
           console.log(`Deleted files and folders: ${paths.length}`);
           if (paths.length > 0) {

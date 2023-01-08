@@ -8,7 +8,7 @@ bin/
 build/
 build.txt
 typings-autogen/
-dist/
+# dist/
 coverage/
 
 # Logs

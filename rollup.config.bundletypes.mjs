@@ -1,4 +1,4 @@
-import internalDel from "del";
+import { deleteSync } from "del";
 import del from "rollup-plugin-delete";
 import dts from "rollup-plugin-dts";
 import * as fsSync from "fs";
@@ -14,7 +14,7 @@ function earlyDel(targets = [], deleteOptions = {}) {
     options: function (options) {
       if (!earlyDelDone) {
         earlyDelDone = true;
-        const paths = internalDel.sync(targets, deleteOptions);
+        const paths = deleteSync(targets, deleteOptions);
         if (deleteOptions.verbose) {
           console.log(`Deleted files and folders: ${paths.length}`);
           if (paths.length > 0) {
